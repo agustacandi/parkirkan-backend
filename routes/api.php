@@ -33,6 +33,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('user/import', [UserController::class, 'import'])->name('user.import');
     Route::delete('user/{user}', [UserController::class, 'delete'])->name('user.delete');
 
+    Route::post('change-password', [AuthController::class, 'changePassword'])->name('change-password');
+
     // vehicle
     Route::apiResource('vehicle', VehicleController::class);
 });

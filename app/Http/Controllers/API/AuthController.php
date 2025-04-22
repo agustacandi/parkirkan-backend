@@ -92,4 +92,19 @@ class AuthController extends BaseController
 
         return $this->sendResponse([], 'User logged out successfully.');
     }
+
+    public function changePassword(Request $request)
+    {
+        $request->validate([
+            'old_password' => 'required',
+            'new_password' => 'required|min:6',
+        ]);
+        $user = Auth::user();
+        if (!password_verify($request->old_password, $user->password)) {
+            return $this->sendError('Unauthorised.', ['error' => 'Old password is incorrect.'], JsonResponse::HTTP_UNAUTHORIZED);
+        }
+        $user->password = bcrypt($request->new_password);
+        $user->save();
+        return $this->sendResponse([], 'Password changed successfully.');
+    }
 }
