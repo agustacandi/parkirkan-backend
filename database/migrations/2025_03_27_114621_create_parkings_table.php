@@ -18,6 +18,7 @@ return new class extends Migration
             $table->dateTime('check_out_time')->nullable();
             $table->string('check_out_image')->nullable();
             $table->string('status')->default('parked');
+            $table->boolean('is_check_out_confirmed')->default(false);
             $table->foreignId('vehicle_id')->constrained()->onDelete('cascade');
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->timestamps();

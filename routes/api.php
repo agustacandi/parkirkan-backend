@@ -26,6 +26,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('check-out', [ParkingController::class, 'checkOut'])->name('check-out');
     Route::get('parking', [ParkingController::class, 'getUserParkingRecords'])->name('parking');
     Route::get('parking-all', [ParkingController::class, 'getParkingRecords'])->name('parking-all');
+    Route::post('parking/confirm-check-out', [ParkingController::class, 'confirmCheckOut'])->name('confirm-check-out');
+    Route::post('parking/is-check-in', [ParkingController::class, 'isUserCheckIn'])->name('is-user-checkin');
 
     // user
     Route::get('user', [UserController::class, 'index'])->name('user');
