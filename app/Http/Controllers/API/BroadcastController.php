@@ -68,7 +68,7 @@ class BroadcastController extends BaseController
 
             return $this->sendResponse($broadcast->toArray(), 'Broadcast added successfully.');
         } catch (\Exception $e) {
-            return $this->sendError('Error adding broadcast.', [], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
+            return $this->sendError('Error adding broadcast: ' . $e->getMessage(), [], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 
