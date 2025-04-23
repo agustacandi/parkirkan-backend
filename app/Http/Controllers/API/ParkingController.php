@@ -154,9 +154,9 @@ class ParkingController extends BaseController
             $parkingRecords = Parking::where('user_id', $user->id)->latest()->paginate($perPage);
 
             // check if parking records exist
-            if ($parkingRecords->isEmpty()) {
-                return $this->sendError('No parking records found', JsonResponse::HTTP_NOT_FOUND);
-            }
+            /* if ($parkingRecords->isEmpty()) { */
+            /*     return $this->sendError('No parking records found', [], JsonResponse::HTTP_NOT_FOUND); */
+            /* } */
 
             // return response
             return $this->sendResponse($parkingRecords->toArray(), 'Parking records retrieved successfully');

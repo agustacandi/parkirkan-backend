@@ -6,6 +6,7 @@ use App\Http\Controllers\API\NotificationController;
 use App\Http\Controllers\API\ParkingController;
 use App\Http\Controllers\API\UserController;
 use App\Http\Controllers\API\VehicleController;
+use App\Http\Controllers\API\SingleController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login'])->name('login');
@@ -39,6 +40,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // vehicle
     Route::apiResource('vehicle', VehicleController::class);
+    Route::get('vehicle-all', [SingleController::class, 'getAllVehicles'])->name('vehicle.all');
 });
 
 Route::post('send-notification', [NotificationController::class, 'sendNotification'])->name('send-notification');
