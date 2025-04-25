@@ -43,4 +43,4 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('vehicle-all', [SingleController::class, 'getAllVehicles'])->name('vehicle.all');
 });
 
-Route::post('send-notification', [NotificationController::class, 'sendNotification'])->name('send-notification');
+Route::post('send-notification/{user}', [NotificationController::class, 'sendNotification'])->name('send-notification');

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API;
 use App\Models\Parking;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Notifications\CheckOutAlert;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -79,6 +80,8 @@ class ParkingController extends BaseController
                 ->exists();
 
             if (!$isCheckOutConfirmed) {
+                $user = Auth::user();
+                $user->notify(new CheckOutAlert());
                 return $this->sendError('Check-out not confirmed', JsonResponse::HTTP_UNPROCESSABLE_ENTITY);
             }
 

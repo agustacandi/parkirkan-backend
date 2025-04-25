@@ -9,10 +9,9 @@ use Illuminate\Http\JsonResponse;
 
 class NotificationController extends BaseController
 {
-    public function sendNotification()
+    public function sendNotification(User $user)
     {
         try {
-            $user = User::find(17);
             $user->notify(new CheckOutAlert());
             return $this->sendResponse([], 'Notification sent successfully');
         } catch (\Exception $e) {
