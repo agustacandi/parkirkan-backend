@@ -21,6 +21,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // broadcast
     Route::apiResource('broadcast', BroadcastController::class);
+    Route::get('broadcast-all', [SingleController::class, 'getAllBroadcasts'])->name('broadcast.all');
 
     // parking
     Route::post('check-in', [ParkingController::class, 'checkIn'])->name('check-in');
