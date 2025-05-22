@@ -26,6 +26,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // parking
     Route::post('check-in', [ParkingController::class, 'checkIn'])->name('check-in');
     Route::put('check-out', [ParkingController::class, 'checkOut'])->name('check-out');
+    Route::put('fuzzy-check-out', [ParkingController::class, 'fuzzyCheckOut'])->name('fuzzy-check-out');
     Route::get('parking', [ParkingController::class, 'getUserParkingRecords'])->name('parking');
     Route::get('parking-all', [ParkingController::class, 'getParkingRecords'])->name('parking-all');
     Route::post('parking/confirm-check-out', [ParkingController::class, 'confirmCheckOut'])->name('confirm-check-out');
@@ -45,3 +46,4 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 Route::post('send-notification/{user}', [NotificationController::class, 'sendNotification'])->name('send-notification');
+Route::post('verify-license-plate', [ParkingController::class, 'verifyLicensePlate'])->name('verify-license-plate');

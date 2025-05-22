@@ -6,8 +6,8 @@ use App\Http\Controllers\API\BaseController;
 use App\Models\Broadcast;
 use App\Models\Vehicle;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Request;
 
 class SingleController extends BaseController
 {
@@ -25,7 +25,7 @@ class SingleController extends BaseController
     public function getAllBroadcasts(Request $request)
     {
         try {
-            $per_page = $request->input('per_page', 5);
+            $per_page = $request->get('per_page', 5);
             $broadcasts = Broadcast::latest()->paginate($per_page);
             return $this->sendResponse($broadcasts->toArray(), 'Broadcasts retrieved successfully.');
         } catch (\Exception $e) {
