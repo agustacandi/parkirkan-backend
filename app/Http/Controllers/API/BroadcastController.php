@@ -3,9 +3,12 @@
 namespace App\Http\Controllers\API;
 
 use App\Models\Broadcast;
+use App\Models\NotificationTopic;
+use App\Notifications\BroadcastNotification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
@@ -63,6 +66,38 @@ class BroadcastController extends BaseController
                     'title'         => $request->title,
                     'description'   => $request->description,
                     'user_id'       => $user->id
+                ]);
+            }
+
+            // Kirim notifikasi FCM ke topic "broadcast" setelah broadcast berhasil ditambahkan
+            try {
+                Log::info('Attempting to send broadcast notification', [
+                    'broadcast_id' => $broadcast->id,
+                    'title' => $broadcast->title
+                ]);
+
+                // Send notification directly to FCM topic without using model
+                $notification = new BroadcastNotification($broadcast);
+
+                // Try to send notification immediately if queue is sync, otherwise queue it
+                if (config('queue.default') === 'sync') {
+                    // Send immediately for sync queue
+                    $this->sendNotificationToTopic($notification);
+                } else {
+                    // For async queue, we'll send immediately since topic messaging doesn't need model
+                    $this->sendNotificationToTopic($notification);
+                }
+
+                Log::info('Broadcast notification sent successfully', [
+                    'broadcast_id' => $broadcast->id,
+                    'queue_connection' => config('queue.default')
+                ]);
+            } catch (\Exception $e) {
+                // Log error but don't fail the request
+                Log::error('Failed to send broadcast notification', [
+                    'broadcast_id' => $broadcast->id,
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
                 ]);
             }
 
@@ -163,6 +198,41 @@ class BroadcastController extends BaseController
             }
         } catch (\Exception $e) {
             return $this->sendError('Error deleting broadcast.', [], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
+     * Send notification directly to FCM topic
+     */
+    private function sendNotificationToTopic(BroadcastNotification $notification)
+    {
+        try {
+            // Use the FCM channel directly
+            $fcmChannel = app(\NotificationChannels\Fcm\FcmChannel::class);
+
+            // Create a dummy notifiable that returns null for FCM routing (topic messaging)
+            $dummyNotifiable = new class {
+                public function routeNotificationFor($driver, $notification = null)
+                {
+                    return null; // Topic will be set in the notification itself
+                }
+
+                public function routeNotificationForFcm()
+                {
+                    return null; // Topic will be set in the notification itself
+                }
+            };
+
+            // Send the notification
+            $fcmChannel->send($dummyNotifiable, $notification);
+
+            Log::info('FCM topic notification sent successfully');
+        } catch (\Exception $e) {
+            Log::error('Failed to send FCM topic notification', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            throw $e;
         }
     }
 }
