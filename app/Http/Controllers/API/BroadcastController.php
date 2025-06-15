@@ -20,7 +20,7 @@ class BroadcastController extends BaseController
     public function index()
     {
         try {
-            $broadcasts = Broadcast::latest()->paginate(5);
+            $broadcasts = Broadcast::with(['user'])->latest()->paginate(5);
             return $this->sendResponse($broadcasts->toArray(), 'Broadcasts retrieved successfully.');
         } catch (\Exception $e) {
             return $this->sendError('Error retrieving broadcasts.', [], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
@@ -69,7 +69,7 @@ class BroadcastController extends BaseController
                 ]);
             }
 
-            // Kirim notifikasi FCM ke topic "broadcast" setelah broadcast berhasil ditambahkan
+            // Send FCM notification to "broadcast" topic after broadcast is successfully added
             try {
                 Log::info('Attempting to send broadcast notification', [
                     'broadcast_id' => $broadcast->id,
@@ -101,6 +101,9 @@ class BroadcastController extends BaseController
                 ]);
             }
 
+            // Load the user relationship before returning response
+            $broadcast->load('user');
+            
             return $this->sendResponse($broadcast->toArray(), 'Broadcast added successfully.');
         } catch (\Exception $e) {
             return $this->sendError('Error adding broadcast: ' . $e->getMessage(), [], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
@@ -114,8 +117,12 @@ class BroadcastController extends BaseController
     {
         try {
             if (!$broadcast) {
-                return $this->sendError('Briadcast not found.', [], JsonResponse::HTTP_NOT_FOUND);
+                return $this->sendError('Broadcast not found.', [], JsonResponse::HTTP_NOT_FOUND);
             }
+            
+            // Load the user relationship to include user data in response
+            $broadcast->load('user');
+            
             return $this->sendResponse($broadcast->toArray(), 'Broadcast retrieved successfully.');
         } catch (\Exception $e) {
             return $this->sendError($e->getMessage(), [], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
@@ -170,6 +177,9 @@ class BroadcastController extends BaseController
                 }
 
 
+                // Load the user relationship before returning response
+                $broadcast->load('user');
+                
                 return $this->sendResponse($broadcast->toArray(), 'Broadcast updated successfully.');
             } else {
                 return $this->sendError('Broadcast not found.', [], JsonResponse::HTTP_NOT_FOUND);

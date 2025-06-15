@@ -37,5 +37,11 @@ class DatabaseSeeder extends Seeder
             'role' => 'admin',
             'password' => bcrypt('admin'),
         ]);
+
+        // Seed vehicles and parking history
+        $this->call([
+            VehicleSeeder::class,
+            ParkingSeeder::class,
+        ]);
     }
 }

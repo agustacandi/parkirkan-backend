@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\API\BaseController;
+use App\Http\Requests\LoginRequest;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
 class AuthController extends BaseController
@@ -32,79 +34,156 @@ class AuthController extends BaseController
     //     return $this->sendResponse($success, 'User registered successfully.');
     // }
 
-    public function login(Request $request)
+    /**
+     * Handle user login
+     */
+    public function login(Request $request): JsonResponse
     {
         try {
-            $request->validate([
+            $validator = Validator::make($request->all(), [
                 'email' => 'required|email',
-                'password' => 'required',
-                'fcm_token' => 'nullable',
+                'password' => 'required|string|min:6',
+                'fcm_token' => 'nullable|string',
             ]);
 
-            if (Auth::attempt($request->only('email', 'password'))) {
+            if ($validator->fails()) {
+                return $this->sendError(
+                    'Validation Error',
+                    $validator->errors(),
+                    JsonResponse::HTTP_UNPROCESSABLE_ENTITY
+                );
+            }
+
+            $credentials = $request->only(['email', 'password']);
+
+            if (Auth::attempt($credentials)) {
                 $user = Auth::user();
 
-                if ($request->filled("fcm_token")) {
+                // Update FCM token if provided
+                if ($request->filled('fcm_token')) {
                     $user->update(['fcm_token' => $request->fcm_token]);
                 }
 
                 $user['token'] = $user->createToken('auth_token')->plainTextToken;
 
                 return $this->sendResponse($user, 'User logged in successfully.');
-            } else {
-                return $this->sendError('Unauthorised.', ['error' => 'Invalid credentials'], JsonResponse::HTTP_UNAUTHORIZED);
             }
+
+            return $this->sendError(
+                'Unauthorised.',
+                ['error' => 'Invalid credentials'],
+                JsonResponse::HTTP_UNAUTHORIZED
+            );
         } catch (\Exception $e) {
-            return $this->sendError('Internal Server Error', ['error' => $e->getMessage()], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
+            Log::error('Login error', ['error' => $e->getMessage(), 'email' => $request->email]);
+            return $this->sendError(
+                'Internal Server Error',
+                ['error' => $e->getMessage()],
+                JsonResponse::HTTP_INTERNAL_SERVER_ERROR
+            );
         }
     }
 
-    public function loginAdmin(Request $request)
+    /**
+     * Handle admin login
+     */
+    public function loginAdmin(Request $request): JsonResponse
     {
         try {
-            $credentials = $request->validate([
-                'email' => 'required|email',
-                'password' => 'required',
-            ]);
+            $credentials = $request->only('email', 'password');
 
-            // check if user is admin
+            // Check if user exists and is admin
             $user = User::where('email', $credentials['email'])->first();
-            if ($user && $user->role !== 'admin') {
-                return $this->sendError('Unauthorised.', ['error' => 'You are not authorized to access this resource.'], JsonResponse::HTTP_UNAUTHORIZED);
+            if ($user && !$user->isAdmin()) {
+                return $this->sendError(
+                    'Unauthorised.',
+                    ['error' => 'You are not authorized to access this resource.'],
+                    JsonResponse::HTTP_UNAUTHORIZED
+                );
             }
 
-            if (Auth::attempt(($credentials))) {
+            if (Auth::attempt($credentials)) {
                 $user = Auth::user();
                 $user['token'] = $user->createToken('auth_token')->plainTextToken;
 
-                return $this->sendResponse($user, 'User logged in successfully.');
-            } else {
-                return $this->sendError('Unauthorised.', ['error' => 'Invalid credentials.'], JsonResponse::HTTP_UNAUTHORIZED);
+                return $this->sendResponse($user, 'Admin logged in successfully.');
             }
+
+            return $this->sendError(
+                'Unauthorised.',
+                ['error' => 'Invalid credentials.'],
+                JsonResponse::HTTP_UNAUTHORIZED
+            );
         } catch (\Exception $e) {
-            return $this->sendError('Internal Server Error', ['error' => $e->getMessage()], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
+            Log::error('Admin login error', ['error' => $e->getMessage(), 'email' => $request->email]);
+            return $this->sendError(
+                'Internal Server Error',
+                ['error' => $e->getMessage()],
+                JsonResponse::HTTP_INTERNAL_SERVER_ERROR
+            );
         }
     }
 
-    public function logout(Request $request)
+    /**
+     * Handle user logout
+     */
+    public function logout(Request $request): JsonResponse
     {
-        $request->user()->currentAccessToken()->delete();
+        try {
+            $request->user()->currentAccessToken()->delete();
 
-        return $this->sendResponse([], 'User logged out successfully.');
+            return $this->sendResponse([], 'User logged out successfully.');
+        } catch (\Exception $e) {
+            Log::error('Logout error', ['error' => $e->getMessage(), 'user_id' => Auth::id()]);
+            return $this->sendError(
+                'Internal Server Error',
+                ['error' => $e->getMessage()],
+                JsonResponse::HTTP_INTERNAL_SERVER_ERROR
+            );
+        }
     }
 
-    public function changePassword(Request $request)
+    /**
+     * Handle password change
+     */
+    public function changePassword(Request $request): JsonResponse
     {
-        $request->validate([
-            'old_password' => 'required',
-            'new_password' => 'required|min:6',
-        ]);
-        $user = Auth::user();
-        if (!password_verify($request->old_password, $user->password)) {
-            return $this->sendError('Unauthorised.', ['error' => 'Old password is incorrect.'], JsonResponse::HTTP_UNAUTHORIZED);
+        try {
+            $validator = Validator::make($request->all(), [
+                'old_password' => 'required',
+                'new_password' => 'required|min:6|confirmed',
+            ]);
+
+            if ($validator->fails()) {
+                return $this->sendError(
+                    'Validation Error',
+                    $validator->errors(),
+                    JsonResponse::HTTP_UNPROCESSABLE_ENTITY
+                );
+            }
+
+            $user = Auth::user();
+
+            if (!password_verify($request->old_password, $user->password)) {
+                return $this->sendError(
+                    'Unauthorised.',
+                    ['error' => 'Old password is incorrect.'],
+                    JsonResponse::HTTP_UNAUTHORIZED
+                );
+            }
+
+            $user->update(['password' => bcrypt($request->new_password)]);
+
+            Log::info('Password changed', ['user_id' => $user->id]);
+
+            return $this->sendResponse([], 'Password changed successfully.');
+        } catch (\Exception $e) {
+            Log::error('Change password error', ['error' => $e->getMessage(), 'user_id' => Auth::id()]);
+            return $this->sendError(
+                'Internal Server Error',
+                ['error' => $e->getMessage()],
+                JsonResponse::HTTP_INTERNAL_SERVER_ERROR
+            );
         }
-        $user->password = bcrypt($request->new_password);
-        $user->save();
-        return $this->sendResponse([], 'Password changed successfully.');
     }
 }

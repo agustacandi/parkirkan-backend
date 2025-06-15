@@ -8,6 +8,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\Log;
+use Kreait\Firebase\Messaging\AndroidConfig;
 use NotificationChannels\Fcm\FcmMessage;
 use NotificationChannels\Fcm\Resources\Notification as FcmNotification;
 
@@ -45,13 +46,18 @@ class BroadcastNotification extends Notification implements ShouldQueue
             'title' => $this->broadcast->title
         ]);
 
+        // Create a preview text that includes both title and description preview
+        $previewText = strlen($this->broadcast->description) > 100 
+            ? substr($this->broadcast->description, 0, 100) . '...'
+            : $this->broadcast->description;
+
         // Include both notification and data payload for better compatibility
         return (new FcmMessage(notification: new FcmNotification(
-            title: '📢 Broadcast Baru!',
-            body: $this->broadcast->title,
+            title: '📢 New Broadcast!',
+            body: $this->broadcast->title . "\n" . $previewText,
             image: $this->broadcast->image
         )))
-            ->topic('broadcast') // Menggunakan topic "broadcast"
+            ->topic('broadcast') // Using "broadcast" topic
             ->data([
                 'notification_type' => 'broadcast',
                 'broadcast_id' => (string) $this->broadcast->id,
@@ -60,7 +66,23 @@ class BroadcastNotification extends Notification implements ShouldQueue
                 'description' => $this->broadcast->description,
                 'created_at' => $this->broadcast->created_at->toISOString(),
                 'target_route' => 'broadcast_detail/' . $this->broadcast->id,
-                'image' => $this->broadcast->image
+                'image' => $this->broadcast->image,
+                'author_name' => $this->broadcast->user->name ?? 'Unknown',
+                'created_at_formatted' => $this->broadcast->created_at->format('M j, Y g:i A')
+            ])
+            ->custom([
+                'android' => AndroidConfig::fromArray(
+                    [
+                        'priority' => 'high',
+                        'notification' => [
+                            'channel_id' => 'parkirkan_notification_channel',
+                            'image' => $this->broadcast->image,
+                            'click_action' => 'OPEN_BROADCAST_NOTIFICATION',
+                            'sound' => 'default',
+                            'tag' => 'broadcast_' . $this->broadcast->id
+                        ]
+                    ],
+                ),
             ]);
     }
 
@@ -80,4 +102,3 @@ class BroadcastNotification extends Notification implements ShouldQueue
         ];
     }
 }
-

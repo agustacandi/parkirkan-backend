@@ -3,10 +3,13 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Parking extends Model
 {
+    use HasFactory;
     protected $fillable = [
         'user_id',
         'vehicle_id',
@@ -15,14 +18,21 @@ class Parking extends Model
         'check_in_image',
         'check_out_image',
         'status',
+        'is_check_out_confirmed',
     ];
 
-    public function vehicle()
+    protected $casts = [
+        'check_in_time' => 'datetime',
+        'check_out_time' => 'datetime',
+        'is_check_out_confirmed' => 'boolean',
+    ];
+
+    public function vehicle(): BelongsTo
     {
         return $this->belongsTo(Vehicle::class);
     }
 
-    public function user()
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }

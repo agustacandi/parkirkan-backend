@@ -26,7 +26,7 @@ class SingleController extends BaseController
     {
         try {
             $per_page = $request->get('per_page', 5);
-            $broadcasts = Broadcast::latest()->paginate($per_page);
+            $broadcasts = Broadcast::with(['user'])->latest()->paginate($per_page);
             return $this->sendResponse($broadcasts->toArray(), 'Broadcasts retrieved successfully.');
         } catch (\Exception $e) {
             return $this->sendError('Error retrieving broadcasts: ' . $e->getMessage(), [], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);

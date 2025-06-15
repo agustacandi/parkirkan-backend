@@ -35,10 +35,18 @@ class CheckOutAlert extends Notification
     public function toFcm($notifiable): FcmMessage
     {
         return (new FcmMessage(notification: new FcmNotification(
-            title: 'Perhatian!',
-            body: 'Ada yang bawa motor kamu nih nih!',
+            title: 'Attention!',
+            body: 'Someone is trying to check out your vehicle!',
         )))
-            ->data(['notification_type' => 'alert', 'click_action' => 'OPEN_NOTIFICATION']);
+            ->data(['notification_type' => 'alert', 'click_action' => 'OPEN_NOTIFICATION'])
+            ->custom([
+                'android' => AndroidConfig::fromArray([
+                    'priority' => 'high',
+                    'notification' => [
+                        'channel_id' => 'parking_alert_channel',
+                    ],
+                ]),
+            ]);;
     }
 
     /**

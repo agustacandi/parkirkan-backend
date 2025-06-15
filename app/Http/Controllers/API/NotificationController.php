@@ -14,6 +14,9 @@ class NotificationController extends BaseController
     {
         try {
             Log::debug($user->name);
+            if ($user->role != 'user') {
+                return $this->sendError('Only user can receive notification', [], JsonResponse::HTTP_FORBIDDEN);
+            }
             $user->notify(new CheckOutAlert());
             return $this->sendResponse([], 'Notification sent successfully');
         } catch (\Exception $e) {
