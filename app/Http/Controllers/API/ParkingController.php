@@ -14,6 +14,7 @@ use App\Services\ParkingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
@@ -752,7 +753,7 @@ class ParkingController extends BaseController
             }
 
             $licensePlate = $request->license_plate;
-            $threshold = $request->input('threshold', 0.7);
+            $threshold = $request->input('threshold', 0.8);
 
             $result = $this->matchingService->findSimilarLicensePlate($licensePlate, $threshold);
 
@@ -864,8 +865,8 @@ class ParkingController extends BaseController
     }
 
     /**
-     * Helper Method: Finds the best matching vehicle using Levenshtein distance,
-     * featuring pre-filtering for performance and ambiguity handling.
+     * Helper Method (v4): Finds the best matching vehicle using Levenshtein distance.
+     * This version fixes the length calculation bug by removing spaces before counting length in the DB query.
      *
      * @param string $ocrText Text from the OCR result.
      * @param int $maxDistance The maximum allowed Levenshtein distance.
@@ -881,28 +882,31 @@ class ParkingController extends BaseController
             return ['matches' => [], 'distance' => -1, 'is_ambiguous' => false];
         }
 
-        // --- Performance Solution: Pre-filtering at the Database Level ---
-        // Only fetch vehicles that start with the same character as the OCR result.
-        // This drastically reduces the number of records to process in PHP.
-        $firstChar = $cleanedOcrText[0];
-        $vehicles = Vehicle::where('license_plate', 'LIKE', $firstChar . '%')->get();
+        $ocrLength = strlen($cleanedOcrText);
+        $minLength = max(1, $ocrLength - 1);
+        $maxLength = $ocrLength + 1;
+
+        // --- FIX IS HERE ---
+        // Tell the database to calculate the length AFTER removing spaces from the license_plate column.
+        // This ensures the length calculation is consistent with what we do in PHP.
+        $vehicles = Vehicle::whereBetween(
+            DB::raw("LENGTH(REPLACE(license_plate, ' ', ''))"),
+            [$minLength, $maxLength]
+        )
+            ->get();
 
         foreach ($vehicles as $vehicle) {
             $dbPlate = strtoupper(preg_replace('/[^A-Z0-9]/', '', $vehicle->license_plate));
             $distance = levenshtein($cleanedOcrText, $dbPlate);
 
-            // --- Ambiguity Solution ---
             if ($distance < $minDistance) {
-                // A better match is found, reset the array and store the new one.
                 $minDistance = $distance;
                 $bestMatches = [$vehicle];
             } elseif ($distance === $minDistance) {
-                // Another match with the same distance is found, add it to the array.
                 $bestMatches[] = $vehicle;
             }
         }
 
-        // Check if the final result is valid (within the threshold).
         if ($minDistance > $maxDistance) {
             return ['matches' => [], 'distance' => $minDistance, 'is_ambiguous' => false];
         }
@@ -923,8 +927,8 @@ class ParkingController extends BaseController
         // 1. Validate input from FastAPI
         $validator = Validator::make($request->all(), [
             'license_plate' => 'required|string|max:20',
-            'image' => 'required|image|mimes:jpeg,png,jpg|max:2048',
-            'confidence' => 'required|numeric',
+            'image' => 'required|image|mimes:jpeg,png,jpg,webp|max:2048',
+            // 'confidence' => 'required|numeric',
             'max_distance' => 'integer|min:0' // Optional parameter from FastAPI
         ]);
 
@@ -937,6 +941,7 @@ class ParkingController extends BaseController
 
         // 2. Use Levenshtein to find the most suitable vehicle
         $matchResult = $this->findVehicleByLevenshtein($ocrText, $maxDistance);
+        dd($matchResult);
 
         // --- Enhanced Search Result Handling ---
 
