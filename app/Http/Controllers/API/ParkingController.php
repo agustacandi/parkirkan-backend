@@ -941,7 +941,6 @@ class ParkingController extends BaseController
 
         // 2. Use Levenshtein to find the most suitable vehicle
         $matchResult = $this->findVehicleByLevenshtein($ocrText, $maxDistance);
-        dd($matchResult);
 
         // --- Enhanced Search Result Handling ---
 
