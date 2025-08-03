@@ -51,10 +51,13 @@ Route::middleware('auth:sanctum')->group(function () {
         // Dashboard
         Route::get('dashboard', [ParkingController::class, 'getDashboard'])->name('dashboard');
 
-        // User management
-        Route::get('user', [UserController::class, 'index'])->name('user');
-        Route::post('user/import', [UserController::class, 'import'])->name('user.import');
+        // User management - Complete CRUD operations
+        Route::get('user', [UserController::class, 'index'])->name('user.index');
+        Route::post('user', [UserController::class, 'store'])->name('user.store');
+        Route::get('user/{user}', [UserController::class, 'show'])->name('user.show');
+        Route::put('user/{user}', [UserController::class, 'update'])->name('user.update');
         Route::delete('user/{user}', [UserController::class, 'delete'])->name('user.delete');
+        Route::post('user/import', [UserController::class, 'import'])->name('user.import');
 
         // All parking records
         Route::get('parking-all', [ParkingController::class, 'getParkingRecords'])->name('parking-all');
