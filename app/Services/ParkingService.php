@@ -4,9 +4,9 @@ namespace App\Services;
 
 use App\Models\Parking;
 use App\Models\Vehicle;
-use App\Notifications\CheckOutAlert;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
+use Kreait\Firebase\Messaging\Notification;
+use Kreait\Firebase\Messaging\AndroidConfig;
 
 class ParkingService
 {
@@ -99,18 +99,61 @@ class ParkingService
     /**
      * Send check-out alert notification
      */
-    public function sendCheckOutAlert(): void
+    public function sendCheckOutAlert(Vehicle $vehicle): void
     {
-        $user = Auth::user();
-        $user->notify(new CheckOutAlert());
+        $vehicle->load("user");
+        $user = $vehicle->user;
+        $notification = Notification::create(
+            '🚨 ATTENTION!',
+            'Someone is trying to check out your vehicle!'
+        );
+
+        $notificationData = [
+            'notification_type' => 'alert',
+            'click_action' => 'OPEN_NOTIFICATION',
+            'vehicle_license_plate' => (string) $vehicle->license_plate,
+        ];
+
+        $notificationService = new NotificationService($notification, $notificationData);
+        $notificationService->sendToToken($user->fcm_token, AndroidConfig::fromArray([
+            'priority' => 'high',
+            'notification' => [
+                'channel_id' => 'parking_alert_channel',
+            ],
+        ]));
+    }
+
+    /**
+     * Report check-out for a vehicle
+     */
+    public function reportCheckOut(Vehicle $vehicle): void
+    {
+        $notification = Notification::create(
+            '🚨 SECURITY ALERT!',
+            'A user’s vehicle with license plate ' . (string) $vehicle->license_plate . ' is being driven away without authorization!'
+        );
+
+        $notificationData = [
+            'notification_type' => 'alert',
+            'click_action' => 'OPEN_NOTIFICATION',
+            'vehicle_license_plate' => (string) $vehicle->license_plate,
+        ];
+
+        $notificationService = new NotificationService($notification, $notificationData);
+        $notificationService->sendToTopic('alert', AndroidConfig::fromArray([
+            'priority' => 'high',
+            'notification' => [
+                'channel_id' => 'parking_alert_channel',
+            ],
+        ]));
     }
 
     /**
      * Find vehicle by license plate with matching strategy
      */
     public function findVehicleByLicensePlate(
-        string $licensePlate, 
-        string $verificationMode = 'exact', 
+        string $licensePlate,
+        string $verificationMode = 'exact',
         float $confidenceThreshold = 0.7
     ): array {
         if ($verificationMode === 'exact') {
@@ -129,4 +172,4 @@ class ParkingService
             'method' => 'fuzzy'
         ];
     }
-} 
+}

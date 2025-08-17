@@ -15,12 +15,12 @@ Route::post('/login', [AuthController::class, 'login'])->name('login');
 Route::post('/login-admin', [AuthController::class, 'loginAdmin'])->name('login-admin');
 
 // Public endpoints for external systems (OCR, etc.)
-Route::post('send-notification/{user}', [NotificationController::class, 'sendNotification'])->name('send-notification');
+// Route::post('send-notification/{user}', [NotificationController::class, 'sendNotification'])->name('send-notification');
 Route::post('verify-license-plate', [ParkingController::class, 'verifyLicensePlate'])->name('verify-license-plate');
 Route::put('fuzzy-check-out', [ParkingController::class, 'fuzzyCheckOut'])->name('fuzzy-check-out');
 Route::post('record-event', [ParkingController::class, 'recordEvent'])->name('record-event');
 Route::post('check-in', [ParkingController::class, 'checkIn'])->name('check-in');
-Route::put('check-out', [ParkingController::class, 'checkOut'])->name('check-out');
+Route::put('check-out', [ParkingController::class, 'checkOut'])->name('check-out')->middleware('auth:sanctum');
 
 // Protected routes - authenticated users
 Route::middleware('auth:sanctum')->group(function () {
@@ -31,6 +31,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Parking operations
     Route::post('parking/confirm-check-out', [ParkingController::class, 'confirmCheckOut'])->name('confirm-check-out');
     Route::post('parking/is-check-in', [ParkingController::class, 'isUserCheckIn'])->name('is-user-checkin');
+    Route::post('parking/report-check-out', [ParkingController::class, 'reportCheckOut'])->name('report-check-out');
     Route::get('parking', [ParkingController::class, 'getUserParkingRecords'])->name('parking');
 
     // Vehicle management

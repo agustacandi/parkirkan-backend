@@ -3,14 +3,15 @@
 namespace App\Http\Controllers\API;
 
 use App\Models\Broadcast;
-use App\Models\NotificationTopic;
-use App\Notifications\BroadcastNotification;
+use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Kreait\Firebase\Messaging\AndroidConfig;
+use Kreait\Firebase\Messaging\Notification;
 
 class BroadcastController extends BaseController
 {
@@ -69,41 +70,49 @@ class BroadcastController extends BaseController
                 ]);
             }
 
-            // Send FCM notification to "broadcast" topic after broadcast is successfully added
-            try {
-                Log::info('Attempting to send broadcast notification', [
-                    'broadcast_id' => $broadcast->id,
-                    'title' => $broadcast->title
-                ]);
+            $previewText = strlen($broadcast->description) > 100
+                ? substr($broadcast->description, 0, 100) . '...'
+                : $broadcast->description;
 
-                // Send notification directly to FCM topic without using model
-                $notification = new BroadcastNotification($broadcast);
+            // Send notification directly to FCM topic without using model
+            $notification = Notification::create(
+                title: '📢 New Broadcast!',
+                body: $broadcast->title . "\n" . $previewText,
+                imageUrl: $broadcast->image
+            );
 
-                // Try to send notification immediately if queue is sync, otherwise queue it
-                if (config('queue.default') === 'sync') {
-                    // Send immediately for sync queue
-                    $this->sendNotificationToTopic($notification);
-                } else {
-                    // For async queue, we'll send immediately since topic messaging doesn't need model
-                    $this->sendNotificationToTopic($notification);
-                }
+            $notificationData = [
+                'notification_type' => 'broadcast',
+                'broadcast_id' => (string) $broadcast->id,
+                'click_action' => 'OPEN_BROADCAST',
+                'title' => $broadcast->title,
+                'description' => $broadcast->description,
+                'created_at' => $broadcast->created_at->toISOString(),
+                'target_route' => 'broadcast_detail/' . $broadcast->id,
+                'image' => $broadcast->image,
+                'author_name' => $broadcast->user->name ?? 'Unknown',
+                'created_at_formatted' => $broadcast->created_at->format('M j, Y g:i A')
+            ];
 
-                Log::info('Broadcast notification sent successfully', [
-                    'broadcast_id' => $broadcast->id,
-                    'queue_connection' => config('queue.default')
-                ]);
-            } catch (\Exception $e) {
-                // Log error but don't fail the request
-                Log::error('Failed to send broadcast notification', [
-                    'broadcast_id' => $broadcast->id,
-                    'error' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString()
-                ]);
-            }
+            $notificationService = new NotificationService($notification, $notificationData);
+            $notificationService->sendToTopic('broadcast', AndroidConfig::fromArray([
+                'priority' => 'high',
+                'notification' => [
+                    'channel_id' => 'parkirkan_notification_channel',
+                    'image' => $broadcast->image,
+                    'click_action' => 'OPEN_BROADCAST_NOTIFICATION',
+                    'sound' => 'default',
+                    'tag' => 'broadcast_' . $broadcast->id
+                ]
+            ]));
 
+            Log::info('Broadcast notification sent successfully', [
+                'broadcast_id' => $broadcast->id,
+                'queue_connection' => config('queue.default')
+            ]);
             // Load the user relationship before returning response
             $broadcast->load('user');
-            
+
             return $this->sendResponse($broadcast->toArray(), 'Broadcast added successfully.');
         } catch (\Exception $e) {
             return $this->sendError('Error adding broadcast: ' . $e->getMessage(), [], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
@@ -119,10 +128,10 @@ class BroadcastController extends BaseController
             if (!$broadcast) {
                 return $this->sendError('Broadcast not found.', [], JsonResponse::HTTP_NOT_FOUND);
             }
-            
+
             // Load the user relationship to include user data in response
             $broadcast->load('user');
-            
+
             return $this->sendResponse($broadcast->toArray(), 'Broadcast retrieved successfully.');
         } catch (\Exception $e) {
             return $this->sendError($e->getMessage(), [], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
@@ -179,7 +188,7 @@ class BroadcastController extends BaseController
 
                 // Load the user relationship before returning response
                 $broadcast->load('user');
-                
+
                 return $this->sendResponse($broadcast->toArray(), 'Broadcast updated successfully.');
             } else {
                 return $this->sendError('Broadcast not found.', [], JsonResponse::HTTP_NOT_FOUND);
@@ -208,41 +217,6 @@ class BroadcastController extends BaseController
             }
         } catch (\Exception $e) {
             return $this->sendError('Error deleting broadcast.', [], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    /**
-     * Send notification directly to FCM topic
-     */
-    private function sendNotificationToTopic(BroadcastNotification $notification)
-    {
-        try {
-            // Use the FCM channel directly
-            $fcmChannel = app(\NotificationChannels\Fcm\FcmChannel::class);
-
-            // Create a dummy notifiable that returns null for FCM routing (topic messaging)
-            $dummyNotifiable = new class {
-                public function routeNotificationFor($driver, $notification = null)
-                {
-                    return null; // Topic will be set in the notification itself
-                }
-
-                public function routeNotificationForFcm()
-                {
-                    return null; // Topic will be set in the notification itself
-                }
-            };
-
-            // Send the notification
-            $fcmChannel->send($dummyNotifiable, $notification);
-
-            Log::info('FCM topic notification sent successfully');
-        } catch (\Exception $e) {
-            Log::error('Failed to send FCM topic notification', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            throw $e;
         }
     }
 }

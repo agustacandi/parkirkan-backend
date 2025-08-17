@@ -13,13 +13,21 @@ use App\Services\LicensePlateMatchingService;
 use App\Services\ParkingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
-class ParkingController extends BaseController
+class ParkingController extends BaseController implements HasMiddleware
 {
+    public static function middleware(): array
+    {
+        return [
+            'auth:sanctum',
+        ];
+    }
+
     public function __construct(
         private ParkingService $parkingService,
         private LicensePlateMatchingService $matchingService
@@ -98,7 +106,7 @@ class ParkingController extends BaseController
 
             // Check if check-out is confirmed
             if (!$this->parkingService->isCheckOutConfirmed($vehicle->id, Auth::id())) {
-                $this->parkingService->sendCheckOutAlert();
+                $this->parkingService->sendCheckOutAlert($vehicle);
                 return $this->sendError(
                     'Check-out not confirmed',
                     ['matched_plate' => $vehicle->license_plate],
@@ -194,6 +202,51 @@ class ParkingController extends BaseController
         }
     }
 
+    /**
+     * Report check-out for a vehicle
+     */
+    public function reportCheckOut(Request $request): JsonResponse
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'license_plate' => 'required|string|max:20',
+            ]);
+
+            if ($validator->fails()) {
+                return $this->sendError(
+                    'Validation Error',
+                    $validator->errors(),
+                    JsonResponse::HTTP_UNPROCESSABLE_ENTITY
+                );
+            }
+
+            $vehicle = Vehicle::where('license_plate', $request->license_plate)->first();
+            if (!$vehicle) {
+                return $this->sendError('Vehicle not found', [], JsonResponse::HTTP_NOT_FOUND);
+            }
+
+            if (!$this->parkingService->hasActiveParkingSession($vehicle->id, Auth::id())) {
+                return $this->sendError(
+                    'Vehicle not checked in',
+                    [],
+                    JsonResponse::HTTP_UNPROCESSABLE_ENTITY
+                );
+            }
+
+            $this->parkingService->reportCheckOut($vehicle);
+
+            return $this->sendResponse([
+                'matched_plate' => $vehicle->license_plate,
+            ], 'Check-out reported successfully');
+        } catch (\Exception $e) {
+            Log::error('Report check-out error', ['error' => $e->getMessage(), 'user_id' => Auth::id()]);
+            return $this->sendError(
+                'Internal Server Error',
+                ['error' => $e->getMessage()],
+                JsonResponse::HTTP_INTERNAL_SERVER_ERROR
+            );
+        }
+    }
     /**
      * Get user's parking records
      */
