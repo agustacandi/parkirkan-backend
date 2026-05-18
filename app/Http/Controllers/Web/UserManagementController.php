@@ -11,6 +11,9 @@ use App\Exports\UserExport;
 
 class UserManagementController extends Controller
 {
+    /**
+     * Menampilkan daftar pengguna dengan fitur pencarian dan pagination.
+     */
     public function index(Request $request)
     {
         $query = User::query();
@@ -25,14 +28,14 @@ class UserManagementController extends Controller
             });
         }
 
-        // Mengecualikan akun admin dari list jika diinginkan (Opsional)
-        // $query->where('role', '!=', 'admin');
-
         $users = $query->orderBy('created_at', 'desc')->paginate(10)->withQueryString();
 
         return view('admin.users.index', compact('users'));
     }
 
+    /**
+     * Menghapus pengguna dari database.
+     */
     public function destroy(User $user)
     {
         // Mencegah admin menghapus dirinya sendiri
@@ -45,6 +48,9 @@ class UserManagementController extends Controller
         return back()->with('success', 'Pengguna berhasil dihapus.');
     }
 
+    /**
+     * Mengimpor data pengguna menggunakan file Excel/CSV.
+     */
     public function import(Request $request)
     {
         $request->validate([
@@ -59,8 +65,15 @@ class UserManagementController extends Controller
         }
     }
 
+    /**
+     * Mengekspor data pengguna ke dalam file Excel (.xlsx).
+     */
     public function export()
     {
-        return Excel::download(new UserExport, 'users.xlsx');
+        try {
+            return Excel::download(new UserExport, 'users.xlsx');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Terjadi kesalahan saat mengekspor data: ' . $e->getMessage());
+        }
     }
 }

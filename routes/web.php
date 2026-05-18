@@ -28,6 +28,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Manajemen Pengguna (Users)
         Route::get('/users', [UserManagementController::class, 'index'])->name('users.index');
         Route::post('/users/import', [UserManagementController::class, 'import'])->name('users.import');
+        Route::get('/users/export', [UserManagementController::class, 'export'])->name('users.export');
         Route::delete('/users/{user}', [UserManagementController::class, 'destroy'])->name('users.destroy');
 
         // Riwayat Parkir (Parking History)

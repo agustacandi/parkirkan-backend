@@ -12,7 +12,7 @@
         <button onclick="document.getElementById('importModal').classList.remove('hidden')" class="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition shadow-sm">
             Import Excel
         </button>
-        <a href="{{ route('users.export') ?? '#' }}" class="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition shadow-sm">
+        <a href="{{ route('admin.users.export') }}" class="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition shadow-sm">
             Export Data
         </a>
     </div>
@@ -20,10 +20,10 @@
 
 <div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
     <div class="p-4 border-b border-gray-100 bg-gray-50/50">
-        <form method="GET" action="{{ route('admin.users.index') }}" class="flex max-w-md">
+        <form method="GET" action="{{ route('admin.users.index') }}" class="flex max-w-md shadow-sm rounded-lg">
             <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari nama, email, atau no HP..."
-                class="flex-1 border-gray-200 rounded-l-lg px-4 py-2 text-sm focus:ring-blue-500 focus:border-blue-500 outline-none">
-            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-r-lg text-sm font-medium transition">
+                class="flex-1 border border-gray-300 border-r-0 rounded-l-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none focus:z-10 bg-white">
+            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-r-lg text-sm font-medium transition focus:ring-2 focus:ring-blue-500 focus:z-10">
                 Cari
             </button>
         </form>
@@ -78,6 +78,15 @@
     </div>
 </div>
 
+<script>
+    function openDeleteModal(url) {
+        document.getElementById('deleteForm').action = url;
+        document.getElementById('deleteModal').classList.remove('hidden');
+    }
+</script>
+@endsection
+
+@section('modals')
 <div id="importModal" class="fixed inset-0 z-50 hidden bg-gray-900/50 backdrop-blur-sm flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden transform transition-all">
         <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
@@ -86,7 +95,7 @@
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
         </div>
-        <form action="{{ route('admin.users.import') ?? '#' }}" method="POST" enctype="multipart/form-data" class="p-6">
+        <form action="{{ route('admin.users.import') }}" method="POST" enctype="multipart/form-data" class="p-6">
             @csrf
             <div class="mb-4">
                 <label class="block text-sm font-medium text-gray-700 mb-2">Pilih File Excel/CSV</label>
@@ -116,11 +125,4 @@
         </form>
     </div>
 </div>
-
-<script>
-    function openDeleteModal(url) {
-        document.getElementById('deleteForm').action = url;
-        document.getElementById('deleteModal').classList.remove('hidden');
-    }
-</script>
 @endsection

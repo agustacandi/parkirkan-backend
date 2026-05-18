@@ -10,10 +10,10 @@
 
 <div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
     <div class="p-4 border-b border-gray-100 bg-gray-50/50">
-        <form method="GET" action="{{ route('admin.parking-history.index') }}" class="flex max-w-md">
+        <form method="GET" action="{{ route('admin.parking-history.index') }}" class="flex max-w-md shadow-sm rounded-lg">
             <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari nama pengguna..."
-                class="flex-1 border-gray-200 rounded-l-lg px-4 py-2 text-sm focus:ring-blue-500 focus:border-blue-500 outline-none">
-            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-r-lg text-sm font-medium transition">
+                class="flex-1 border border-gray-300 border-r-0 rounded-l-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none focus:z-10 bg-white">
+            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-r-lg text-sm font-medium transition focus:ring-2 focus:ring-blue-500 focus:z-10">
                 Cari
             </button>
         </form>

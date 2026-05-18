@@ -21,8 +21,8 @@
 
         <div id="sidebar-overlay" class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-30 hidden transition-opacity opacity-0"></div>
 
-        <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-200 transform -translate-x-full md:translate-x-0 md:static md:inset-auto transition-transform duration-300 ease-in-out flex flex-col">
-            <div class="flex items-center justify-center h-16 border-b border-gray-200 hidden md:flex">
+        <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-200 transform -translate-x-full md:translate-x-0 md:sticky md:top-0 md:h-screen transition-transform duration-300 ease-in-out flex flex-col">
+            <div class="flex items-center justify-center h-16 border-b border-gray-200 hidden md:flex shrink-0">
                 <div class="text-2xl font-bold text-blue-600">Parkirkan</div>
             </div>
 
@@ -41,7 +41,7 @@
                 </nav>
             </div>
 
-            <div class="p-4 border-t border-gray-200">
+            <div class="p-4 border-t border-gray-200 shrink-0">
                 <form method="POST" action="{{ route('admin.logout') }}">
                     @csrf
                     <button type="submit" class="w-full flex items-center justify-center px-4 py-2 text-sm font-medium text-red-600 rounded-lg hover:bg-red-50 transition-colors border border-transparent hover:border-red-100">
@@ -69,5 +69,8 @@
             </div>
         </main>
     </div>
+
+    @yield('modals')
+
 </body>
 </html>
