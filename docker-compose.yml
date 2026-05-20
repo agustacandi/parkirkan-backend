@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: parkirkan-app
+    container_name: parkirkan-app
+    restart: unless-stopped
+    working_dir: /var/www
+    volumes:
+      - ./:/var/www
+    networks:
+      - parkirkan-network
+
+  webserver:
+    image: nginx:alpine
+    container_name: parkirkan-webserver
+    restart: unless-stopped
+    ports:
+      - "8000:80" # Mengekspos port 8000 ke VPS lokal
+    volumes:
+      - ./:/var/www
+      - ./docker/nginx/app.conf:/etc/nginx/conf.d/default.conf
+    networks:
+      - parkirkan-network
+    depends_on:
+      - app
+
+  db:
+    image: mysql:8.0
+    container_name: parkirkan-db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_USER: ${DB_USERNAME}
+    volumes:
+      - dbdata:/var/lib/mysql
+    networks:
+      - parkirkan-network
+
+networks:
+  parkirkan-network:
+    driver: bridge
+
+volumes:
+  dbdata:
