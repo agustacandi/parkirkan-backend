@@ -49,7 +49,7 @@ class VehicleController extends BaseController
 
             //upload image
             $image = $request->file('image');
-            $image->storeAs('vehicles', $image->hashName());
+            $image->storeAs('vehicles', $image->hashName(), 'public');
 
             //create vehicle
             $vehicle = Vehicle::create([
@@ -103,12 +103,11 @@ class VehicleController extends BaseController
                 //check if image is not empty
                 if ($request->hasFile('image')) {
 
-                    //delete old image
-                    Storage::delete('vehicles/' . basename($vehicle->image));
+                    Storage::disk('public')->delete('vehicles/' . basename($vehicle->image));
 
                     //upload image
                     $image = $request->file('image');
-                    $image->storeAs('vehicles', $image->hashName());
+                    $image->storeAs('vehicles', $image->hashName(), 'public');
 
                     //update vehicle with new image
                     $vehicle->update([
@@ -143,7 +142,7 @@ class VehicleController extends BaseController
         try {
             if ($vehicle) {
                 if ($vehicle->image) {
-                    Storage::disk('public')->delete($vehicle->image);
+                    Storage::disk('public')->delete('vehicles/' . basename($vehicle->image));
                 }
                 $vehicle->delete();
                 return $this->sendResponse([], 'Vehicle deleted successfully.');
