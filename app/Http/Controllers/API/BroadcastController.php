@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\API;
 
 use App\Models\Broadcast;
-use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -11,7 +10,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Kreait\Firebase\Messaging\AndroidConfig;
-use Kreait\Firebase\Messaging\Notification;
+use Kreait\Firebase\Messaging\CloudMessage;
 
 class BroadcastController extends BaseController
 {
@@ -53,7 +52,7 @@ class BroadcastController extends BaseController
             if ($request->hasFile('image')) {
                 //upload image
                 $image = $request->file('image');
-                $image->storeAs('broadcasts', $image->hashName());
+                $image->storeAs('broadcasts', $image->hashName(), 'public');
                 //create broadcast
                 $broadcast = Broadcast::create([
                     'title'         => $request->title,
@@ -71,71 +70,60 @@ class BroadcastController extends BaseController
             }
 
             $notificationSent = false;
+            $notificationError = null;
+            $notificationTopic = config('firebase.default_topic', 'broadcast');
             $previewText = strlen($broadcast->description) > 100
                 ? substr($broadcast->description, 0, 100) . '...'
                 : $broadcast->description;
 
-            $projectId = config('firebase.project_id');
-            $credentials = config('firebase.credentials');
+            try {
+                $data = [
+                    'notification_type' => 'broadcast',
+                    'notification_title' => '📢 New Broadcast!',
+                    'notification_body' => $broadcast->title . "\n" . $previewText,
+                    'broadcast_id' => (string) $broadcast->id,
+                    'id' => (string) $broadcast->id,
+                    'click_action' => 'OPEN_BROADCAST',
+                    'title' => $broadcast->title,
+                    'description' => $broadcast->description,
+                    'created_at' => $broadcast->created_at->toISOString(),
+                    'target_route' => 'broadcast_detail/' . $broadcast->id,
+                    'image_url' => $broadcast->image,
+                    'image' => $broadcast->image,
+                    'author_name' => $broadcast->user->name ?? 'Unknown',
+                    'created_at_formatted' => $broadcast->created_at->format('M j, Y g:i A'),
+                ];
 
-            if (!$projectId || !$credentials || (is_string($credentials) && !file_exists($credentials))) {
-                Log::warning('Broadcast created but notification skipped due to missing Firebase configuration', [
-                    'broadcast_id' => $broadcast->id,
-                    'firebase_project_id_present' => (bool) $projectId,
-                    'firebase_credentials_present' => (bool) $credentials,
-                    'firebase_credentials_file_exists' => is_string($credentials) ? file_exists($credentials) : null,
-                ]);
-            } else {
-                try {
-                    // Send notification directly to FCM topic without using model
-                    $notification = Notification::create(
-                        title: '📢 New Broadcast!',
-                        body: $broadcast->title . "\n" . $previewText,
-                        imageUrl: $broadcast->image
-                    );
-
-                    $notificationData = [
-                        'notification_type' => 'broadcast',
-                        'broadcast_id' => (string) $broadcast->id,
-                        'click_action' => 'OPEN_BROADCAST',
-                        'title' => $broadcast->title,
-                        'description' => $broadcast->description,
-                        'created_at' => $broadcast->created_at->toISOString(),
-                        'target_route' => 'broadcast_detail/' . $broadcast->id,
-                        'image' => $broadcast->image,
-                        'author_name' => $broadcast->user->name ?? 'Unknown',
-                        'created_at_formatted' => $broadcast->created_at->format('M j, Y g:i A')
-                    ];
-
-                    $notificationService = new NotificationService($notification, $notificationData);
-                    $notificationService->sendToTopic('broadcast', AndroidConfig::fromArray([
+                $message = CloudMessage::new()
+                    ->toTopic($notificationTopic)
+                    ->withData($data)
+                    ->withAndroidConfig(AndroidConfig::fromArray([
                         'priority' => 'high',
-                        'notification' => [
-                            'channel_id' => 'parkirkan_notification_channel',
-                            'image' => $broadcast->image,
-                            'click_action' => 'OPEN_BROADCAST_NOTIFICATION',
-                            'sound' => 'default',
-                            'tag' => 'broadcast_' . $broadcast->id
-                        ]
                     ]));
 
-                    $notificationSent = true;
-                    Log::info('Broadcast notification sent successfully', [
-                        'broadcast_id' => $broadcast->id,
-                        'queue_connection' => config('queue.default')
-                    ]);
-                } catch (\Throwable $e) {
-                    Log::warning('Broadcast created but notification failed', [
-                        'broadcast_id' => $broadcast->id,
-                        'error' => $e->getMessage(),
-                    ]);
-                }
+                app('firebase.messaging')->send($message);
+                $notificationSent = true;
+
+                Log::info('Broadcast notification sent successfully', [
+                    'broadcast_id' => $broadcast->id,
+                    'topic' => $notificationTopic,
+                    'queue_connection' => config('queue.default')
+                ]);
+            } catch (\Throwable $e) {
+                $notificationError = $e->getMessage();
+                Log::warning('Broadcast created but notification failed', [
+                    'broadcast_id' => $broadcast->id,
+                    'topic' => $notificationTopic,
+                    'error' => $notificationError,
+                ]);
             }
             // Load the user relationship before returning response
             $broadcast->load('user');
 
             $payload = $broadcast->toArray();
             $payload['notification_sent'] = $notificationSent;
+            $payload['notification_topic'] = $notificationTopic;
+            $payload['notification_error'] = $notificationError;
 
             $message = $notificationSent
                 ? 'Broadcast added successfully.'
@@ -191,12 +179,12 @@ class BroadcastController extends BaseController
 
                     //delete old image
                     if ($broadcast->image) {
-                        Storage::delete('broadcasts/' . basename($broadcast->image));
+                        Storage::disk('public')->delete('broadcasts/' . basename($broadcast->image));
                     }
 
                     //upload image
                     $image = $request->file('image');
-                    $image->storeAs('broadcasts', $image->hashName());
+                    $image->storeAs('broadcasts', $image->hashName(), 'public');
 
                     //update broadcast with new image
                     $broadcast->update([
@@ -235,7 +223,7 @@ class BroadcastController extends BaseController
             if ($broadcast) {
 
                 if ($broadcast->image) {
-                    Storage::disk('public')->delete($broadcast->image);
+                    Storage::disk('public')->delete('broadcasts/' . basename($broadcast->image));
                 }
 
                 $broadcast->delete();
