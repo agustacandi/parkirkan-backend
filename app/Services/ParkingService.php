@@ -100,7 +100,7 @@ class ParkingService
     /**
      * Send check-out alert notification
      */
-    public function sendCheckOutAlert(Vehicle $vehicle): void
+    public function sendCheckOutAlert(Vehicle $vehicle): bool
     {
         $projectId = config('firebase.project_id');
         $credentials = config('firebase.credentials');
@@ -112,7 +112,7 @@ class ParkingService
                 'firebase_credentials_present' => (bool) $credentials,
                 'firebase_credentials_file_exists' => is_string($credentials) ? file_exists($credentials) : null,
             ]);
-            return;
+            return false;
         }
 
         try {
@@ -125,7 +125,7 @@ class ParkingService
                     'user_id' => $user?->id,
                     'fcm_token_present' => (bool) ($user?->fcm_token),
                 ]);
-                return;
+                return false;
             }
 
             $notification = Notification::create(
@@ -146,11 +146,14 @@ class ParkingService
                     'channel_id' => 'parking_alert_channel',
                 ],
             ]));
+
+            return true;
         } catch (\Throwable $e) {
             Log::warning('Check-out alert failed', [
                 'vehicle_id' => $vehicle->id,
                 'error' => $e->getMessage(),
             ]);
+            return false;
         }
     }
 
