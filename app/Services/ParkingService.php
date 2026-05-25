@@ -100,21 +100,8 @@ class ParkingService
     /**
      * Send check-out alert notification
      */
-    public function sendCheckOutAlert(Vehicle $vehicle): bool
+    public function sendCheckOutAlert(Vehicle $vehicle): array
     {
-        $projectId = config('firebase.project_id');
-        $credentials = config('firebase.credentials');
-
-        if (!$projectId || !$credentials || (is_string($credentials) && !file_exists($credentials))) {
-            Log::warning('Check-out alert skipped due to missing Firebase configuration', [
-                'vehicle_id' => $vehicle->id,
-                'firebase_project_id_present' => (bool) $projectId,
-                'firebase_credentials_present' => (bool) $credentials,
-                'firebase_credentials_file_exists' => is_string($credentials) ? file_exists($credentials) : null,
-            ]);
-            return false;
-        }
-
         try {
             $vehicle->load('user');
             $user = $vehicle->user;
@@ -125,7 +112,10 @@ class ParkingService
                     'user_id' => $user?->id,
                     'fcm_token_present' => (bool) ($user?->fcm_token),
                 ]);
-                return false;
+                return [
+                    'sent' => false,
+                    'reason' => !$user ? 'missing_user' : 'missing_fcm_token',
+                ];
             }
 
             $notification = Notification::create(
@@ -147,13 +137,19 @@ class ParkingService
                 ],
             ]));
 
-            return true;
+            return [
+                'sent' => true,
+                'reason' => null,
+            ];
         } catch (\Throwable $e) {
             Log::warning('Check-out alert failed', [
                 'vehicle_id' => $vehicle->id,
                 'error' => $e->getMessage(),
             ]);
-            return false;
+            return [
+                'sent' => false,
+                'reason' => 'exception: ' . $e->getMessage(),
+            ];
         }
     }
 

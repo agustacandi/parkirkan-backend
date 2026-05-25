@@ -1037,9 +1037,12 @@ class ParkingController extends BaseController implements HasMiddleware
             if (!$activeParking->is_check_out_confirmed) {
                 $vehicleOwner = $activeParking->user;
                 $alertSent = false;
+                $alertReason = null;
                 if ($vehicleOwner) {
                     try {
-                        $alertSent = $this->parkingService->sendCheckOutAlert($vehicle);
+                        $alertResult = $this->parkingService->sendCheckOutAlert($vehicle);
+                        $alertSent = (bool) ($alertResult['sent'] ?? false);
+                        $alertReason = $alertResult['reason'] ?? null;
                     } catch (\Throwable $e) {
                         Log::warning('Failed sending checkout alert from record-event', [
                             'vehicle_id' => $vehicle->id,
@@ -1052,6 +1055,7 @@ class ParkingController extends BaseController implements HasMiddleware
                 return $this->sendError('Check-out not confirmed by owner', [
                     'message' => 'Check-out process detected, but owner confirmation is pending. An alert notification has been sent.',
                     'alert_sent' => $alertSent,
+                    'alert_reason' => $alertReason,
                     'license_plate' => $vehicle->license_plate,
                     'ocr_text' => $ocrText,
                     'levenshtein_distance' => $levenshteinDistance,
