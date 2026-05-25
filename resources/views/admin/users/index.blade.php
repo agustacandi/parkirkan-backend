@@ -76,6 +76,8 @@
                     <td class="px-6 py-4">
                         @if($user->role === 'admin')
                             <x-admin.badge type="info">Admin</x-admin.badge>
+                        @elseif($user->role === 'security')
+                            <x-admin.badge type="warning">Security</x-admin.badge>
                         @else
                             <x-admin.badge type="gray">User</x-admin.badge>
                         @endif
@@ -182,6 +184,7 @@
                     <label class="block text-sm font-medium text-gray-700 mb-1">Role</label>
                     <select name="role" id="inputRole" required class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm bg-white">
                         <option value="user">User</option>
+                        <option value="security">Security</option>
                         <option value="admin">Admin</option>
                     </select>
                 </div>

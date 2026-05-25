@@ -44,7 +44,7 @@ class UserManagementController extends Controller
             'name'     => 'required|string|max:255',
             'email'    => 'required|string|email|max:255|unique:users',
             'phone'    => 'nullable|string|max:20',
-            'role'     => 'required|in:admin,user',
+            'role'     => 'required|in:admin,user,security',
             'password' => 'required|string|min:8',
         ]);
 
@@ -73,7 +73,7 @@ class UserManagementController extends Controller
             // Pengecualian unik email agar bisa update tanpa harus mengganti email
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
             'phone' => 'nullable|string|max:20',
-            'role'  => 'required|in:admin,user',
+            'role'  => 'required|in:admin,user,security',
             'password' => 'nullable|string|min:8',
         ]);
 
