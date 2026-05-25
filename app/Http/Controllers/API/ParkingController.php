@@ -8,7 +8,6 @@ use App\Http\Resources\ParkingResource;
 use App\Models\Parking;
 use App\Models\User;
 use App\Models\Vehicle;
-use App\Notifications\CheckOutAlert;
 use App\Services\LicensePlateMatchingService;
 use App\Services\ParkingService;
 use Illuminate\Http\JsonResponse;
@@ -1037,8 +1036,16 @@ class ParkingController extends BaseController implements HasMiddleware
             // Check if the owner has confirmed
             if (!$activeParking->is_check_out_confirmed) {
                 $vehicleOwner = $activeParking->user;
-                if ($vehicleOwner) { // Make sure the user exists before sending a notification
-                    $vehicleOwner->notify(new CheckOutAlert());
+                if ($vehicleOwner) {
+                    try {
+                        $this->parkingService->sendCheckOutAlert($vehicle);
+                    } catch (\Throwable $e) {
+                        Log::warning('Failed sending checkout alert from record-event', [
+                            'vehicle_id' => $vehicle->id,
+                            'parking_id' => $activeParking->id,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
                 }
 
                 return $this->sendError('Check-out not confirmed by owner', [

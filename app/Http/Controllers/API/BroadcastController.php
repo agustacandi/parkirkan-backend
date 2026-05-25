@@ -70,50 +70,78 @@ class BroadcastController extends BaseController
                 ]);
             }
 
+            $notificationSent = false;
             $previewText = strlen($broadcast->description) > 100
                 ? substr($broadcast->description, 0, 100) . '...'
                 : $broadcast->description;
 
-            // Send notification directly to FCM topic without using model
-            $notification = Notification::create(
-                title: '📢 New Broadcast!',
-                body: $broadcast->title . "\n" . $previewText,
-                imageUrl: $broadcast->image
-            );
+            $projectId = config('firebase.project_id');
+            $credentials = config('firebase.credentials');
 
-            $notificationData = [
-                'notification_type' => 'broadcast',
-                'broadcast_id' => (string) $broadcast->id,
-                'click_action' => 'OPEN_BROADCAST',
-                'title' => $broadcast->title,
-                'description' => $broadcast->description,
-                'created_at' => $broadcast->created_at->toISOString(),
-                'target_route' => 'broadcast_detail/' . $broadcast->id,
-                'image' => $broadcast->image,
-                'author_name' => $broadcast->user->name ?? 'Unknown',
-                'created_at_formatted' => $broadcast->created_at->format('M j, Y g:i A')
-            ];
+            if (!$projectId || !$credentials || (is_string($credentials) && !file_exists($credentials))) {
+                Log::warning('Broadcast created but notification skipped due to missing Firebase configuration', [
+                    'broadcast_id' => $broadcast->id,
+                    'firebase_project_id_present' => (bool) $projectId,
+                    'firebase_credentials_present' => (bool) $credentials,
+                    'firebase_credentials_file_exists' => is_string($credentials) ? file_exists($credentials) : null,
+                ]);
+            } else {
+                try {
+                    // Send notification directly to FCM topic without using model
+                    $notification = Notification::create(
+                        title: '📢 New Broadcast!',
+                        body: $broadcast->title . "\n" . $previewText,
+                        imageUrl: $broadcast->image
+                    );
 
-            $notificationService = new NotificationService($notification, $notificationData);
-            $notificationService->sendToTopic('broadcast', AndroidConfig::fromArray([
-                'priority' => 'high',
-                'notification' => [
-                    'channel_id' => 'parkirkan_notification_channel',
-                    'image' => $broadcast->image,
-                    'click_action' => 'OPEN_BROADCAST_NOTIFICATION',
-                    'sound' => 'default',
-                    'tag' => 'broadcast_' . $broadcast->id
-                ]
-            ]));
+                    $notificationData = [
+                        'notification_type' => 'broadcast',
+                        'broadcast_id' => (string) $broadcast->id,
+                        'click_action' => 'OPEN_BROADCAST',
+                        'title' => $broadcast->title,
+                        'description' => $broadcast->description,
+                        'created_at' => $broadcast->created_at->toISOString(),
+                        'target_route' => 'broadcast_detail/' . $broadcast->id,
+                        'image' => $broadcast->image,
+                        'author_name' => $broadcast->user->name ?? 'Unknown',
+                        'created_at_formatted' => $broadcast->created_at->format('M j, Y g:i A')
+                    ];
 
-            Log::info('Broadcast notification sent successfully', [
-                'broadcast_id' => $broadcast->id,
-                'queue_connection' => config('queue.default')
-            ]);
+                    $notificationService = new NotificationService($notification, $notificationData);
+                    $notificationService->sendToTopic('broadcast', AndroidConfig::fromArray([
+                        'priority' => 'high',
+                        'notification' => [
+                            'channel_id' => 'parkirkan_notification_channel',
+                            'image' => $broadcast->image,
+                            'click_action' => 'OPEN_BROADCAST_NOTIFICATION',
+                            'sound' => 'default',
+                            'tag' => 'broadcast_' . $broadcast->id
+                        ]
+                    ]));
+
+                    $notificationSent = true;
+                    Log::info('Broadcast notification sent successfully', [
+                        'broadcast_id' => $broadcast->id,
+                        'queue_connection' => config('queue.default')
+                    ]);
+                } catch (\Throwable $e) {
+                    Log::warning('Broadcast created but notification failed', [
+                        'broadcast_id' => $broadcast->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
             // Load the user relationship before returning response
             $broadcast->load('user');
 
-            return $this->sendResponse($broadcast->toArray(), 'Broadcast added successfully.');
+            $payload = $broadcast->toArray();
+            $payload['notification_sent'] = $notificationSent;
+
+            $message = $notificationSent
+                ? 'Broadcast added successfully.'
+                : 'Broadcast added successfully (notification not sent).';
+
+            return $this->sendResponse($payload, $message);
         } catch (\Exception $e) {
             return $this->sendError('Error adding broadcast: ' . $e->getMessage(), [], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
         }

@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Parking;
 use App\Models\Vehicle;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Kreait\Firebase\Messaging\Notification;
 use Kreait\Firebase\Messaging\AndroidConfig;
 
@@ -101,26 +102,56 @@ class ParkingService
      */
     public function sendCheckOutAlert(Vehicle $vehicle): void
     {
-        $vehicle->load("user");
-        $user = $vehicle->user;
-        $notification = Notification::create(
-            '🚨 ATTENTION!',
-            'Someone is trying to check out your vehicle!'
-        );
+        $projectId = config('firebase.project_id');
+        $credentials = config('firebase.credentials');
 
-        $notificationData = [
-            'notification_type' => 'alert',
-            'click_action' => 'OPEN_NOTIFICATION',
-            'vehicle_license_plate' => (string) $vehicle->license_plate,
-        ];
+        if (!$projectId || !$credentials || (is_string($credentials) && !file_exists($credentials))) {
+            Log::warning('Check-out alert skipped due to missing Firebase configuration', [
+                'vehicle_id' => $vehicle->id,
+                'firebase_project_id_present' => (bool) $projectId,
+                'firebase_credentials_present' => (bool) $credentials,
+                'firebase_credentials_file_exists' => is_string($credentials) ? file_exists($credentials) : null,
+            ]);
+            return;
+        }
 
-        $notificationService = new NotificationService($notification, $notificationData);
-        $notificationService->sendToToken($user->fcm_token, AndroidConfig::fromArray([
-            'priority' => 'high',
-            'notification' => [
-                'channel_id' => 'parking_alert_channel',
-            ],
-        ]));
+        try {
+            $vehicle->load('user');
+            $user = $vehicle->user;
+
+            if (!$user || !$user->fcm_token) {
+                Log::warning('Check-out alert skipped due to missing user or FCM token', [
+                    'vehicle_id' => $vehicle->id,
+                    'user_id' => $user?->id,
+                    'fcm_token_present' => (bool) ($user?->fcm_token),
+                ]);
+                return;
+            }
+
+            $notification = Notification::create(
+                '🚨 ATTENTION!',
+                'Someone is trying to check out your vehicle!'
+            );
+
+            $notificationData = [
+                'notification_type' => 'alert',
+                'click_action' => 'OPEN_NOTIFICATION',
+                'vehicle_license_plate' => (string) $vehicle->license_plate,
+            ];
+
+            $notificationService = new NotificationService($notification, $notificationData);
+            $notificationService->sendToToken($user->fcm_token, AndroidConfig::fromArray([
+                'priority' => 'high',
+                'notification' => [
+                    'channel_id' => 'parking_alert_channel',
+                ],
+            ]));
+        } catch (\Throwable $e) {
+            Log::warning('Check-out alert failed', [
+                'vehicle_id' => $vehicle->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**

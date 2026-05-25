@@ -4,7 +4,6 @@ namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\API\BaseController;
 use App\Models\User;
-use App\Notifications\CheckOutAlert;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
 
