@@ -1,4 +1,5 @@
 import './bootstrap';
+import ApexCharts from 'apexcharts';
 
 document.addEventListener('DOMContentLoaded', () => {
     // --- 1. Toggle Sidebar Mobile ---
@@ -68,4 +69,64 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => alert.remove(), 500);
         }, 5000);
     });
+
+    const parkingTrendsEl = document.getElementById('parkingTrendsChart');
+    if (parkingTrendsEl) {
+        const labels = JSON.parse(parkingTrendsEl.dataset.labels || '[]');
+        const values = JSON.parse(parkingTrendsEl.dataset.values || '[]').map(v => Number(v) || 0);
+
+        const options = {
+            chart: {
+                type: 'bar',
+                height: 320,
+                toolbar: { show: false },
+                fontFamily: 'inherit',
+            },
+            series: [
+                { name: 'Parkir', data: values },
+            ],
+            xaxis: {
+                categories: labels,
+                labels: {
+                    style: { colors: '#64748b', fontWeight: 600 },
+                },
+                axisBorder: { show: false },
+                axisTicks: { show: false },
+            },
+            yaxis: {
+                labels: {
+                    style: { colors: '#94a3b8' },
+                },
+            },
+            grid: {
+                strokeDashArray: 4,
+                borderColor: 'rgba(148,163,184,0.25)',
+            },
+            plotOptions: {
+                bar: {
+                    borderRadius: 10,
+                    columnWidth: '50%',
+                },
+            },
+            dataLabels: { enabled: false },
+            tooltip: {
+                y: {
+                    formatter: (val) => `${val} parkir`,
+                },
+            },
+            fill: {
+                type: 'gradient',
+                gradient: {
+                    shadeIntensity: 0.3,
+                    opacityFrom: 0.95,
+                    opacityTo: 0.85,
+                    stops: [0, 90, 100],
+                },
+            },
+            colors: ['#2563eb'],
+        };
+
+        const chart = new ApexCharts(parkingTrendsEl, options);
+        chart.render();
+    }
 });

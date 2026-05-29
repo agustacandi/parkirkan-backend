@@ -5,8 +5,8 @@
 @section('content')
 <div class="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
     <div>
-        <h1 class="text-2xl font-bold text-gray-900">Dashboard Utama</h1>
-        <p class="text-gray-500 text-sm mt-1">Ringkasan data aplikasi Parkirkan hari ini.</p>
+        <h1 class="text-3xl font-extrabold tracking-tight text-slate-900">Dashboard Utama</h1>
+        <p class="text-slate-500 text-sm mt-1">Ringkasan data aplikasi Parkirkan hari ini.</p>
     </div>
 </div>
 
@@ -30,29 +30,11 @@
     </x-admin.stat-card>
 </div>
 
-<div class="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
-    <h3 class="text-lg font-bold text-gray-800 mb-6">Tren Parkir (7 Hari Terakhir)</h3>
+<div class="surface p-6">
+    <h3 class="text-lg font-extrabold tracking-tight text-slate-800 mb-6">Tren Parkir (7 Hari Terakhir)</h3>
 
-    @php
-        $maxValue = max($chartValues) > 0 ? max($chartValues) : 1;
-    @endphp
-
-    <div class="flex items-end justify-between h-48 space-x-2 md:space-x-4">
-        @foreach($chartLabels as $index => $label)
-            @php
-                $value = $chartValues[$index] ?? 0;
-                $height = ($value / $maxValue) * 100;
-            @endphp
-            <div class="flex flex-col items-center flex-1 group">
-                <div class="relative w-full flex justify-center items-end h-full bg-gray-50 rounded-t-lg">
-                    <div class="absolute bottom-full mb-2 hidden group-hover:block bg-gray-800 text-white text-xs py-1 px-2 rounded whitespace-nowrap z-10">
-                        {{ $value }} Parkir
-                    </div>
-                    <div class="w-full max-w-[40px] bg-gradient-to-t from-blue-600 to-cyan-400 rounded-t-sm transition-all duration-500 ease-in-out" style="height: {{ $height }}%"></div>
-                </div>
-                <div class="mt-3 text-xs text-gray-500 font-medium rotate-45 md:rotate-0 origin-left">{{ $label }}</div>
-            </div>
-        @endforeach
-    </div>
+    <div id="parkingTrendsChart" class="w-full"
+        data-labels='@json($chartLabels)'
+        data-values='@json($chartValues)'></div>
 </div>
 @endsection

@@ -18,7 +18,7 @@ class EnsureAdminWeb
     {
         // Jika belum login, arahkan ke halaman login admin
         if (!Auth::check()) {
-            return redirect()->route('admin.login');
+            return redirect('/admin/login');
         }
 
         // Jika sudah login tapi bukan admin, logout dan kembalikan dengan pesan error
@@ -27,7 +27,7 @@ class EnsureAdminWeb
             $request->session()->invalidate();
             $request->session()->regenerateToken();
 
-            return redirect()->route('admin.login')->withErrors([
+            return redirect('/admin/login')->withErrors([
                 'email' => 'Anda tidak memiliki hak akses sebagai administrator.',
             ]);
         }

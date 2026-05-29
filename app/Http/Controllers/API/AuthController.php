@@ -42,7 +42,7 @@ class AuthController extends BaseController
         try {
             $validator = Validator::make($request->all(), [
                 'email' => 'required|email',
-                'password' => 'required|string|min:6',
+                'password' => 'required|string|min:1',
                 'fcm_token' => 'nullable|string',
             ]);
 

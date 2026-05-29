@@ -717,24 +717,56 @@ class ParkingController extends BaseController implements HasMiddleware
         try {
             $totalVehicles = Vehicle::count();
             $totalUsers = User::count();
-            $totalParkings = Parking::whereDate('check_in_time', now())->count();
+            $totalParkings = Parking::count();
+            $totalParkingsToday = Parking::whereDate('check_in_time', now()->toDateString())->count();
 
-            // Chart data for last 7 days
-            $parkings = Parking::selectRaw('DATE(check_in_time) as date, COUNT(*) as count')
+            // Chart data for last 7 days (always returns 7 points, ordered oldest -> newest)
+            $startDate = now()->startOfDay()->subDays(6);
+
+            $parkingsByDate = Parking::selectRaw('DATE(check_in_time) as date, COUNT(*) as count')
+                ->where('check_in_time', '>=', $startDate)
                 ->groupBy('date')
-                ->orderBy('date', 'desc')
-                ->limit(7)
-                ->get();
+                ->orderBy('date', 'asc')
+                ->get()
+                ->keyBy('date');
+
+            $labels = [];
+            $labelsFormatted = [];
+            $data = [];
+
+            for ($i = 0; $i < 7; $i++) {
+                $dateString = $startDate->copy()->addDays($i)->toDateString();
+                $labels[] = $dateString;
+                $labelsFormatted[] = \Carbon\Carbon::parse($dateString)->format('d M');
+
+                $item = $parkingsByDate->get($dateString);
+                $data[] = $item ? (int) $item->count : 0;
+            }
 
             $chartData = [
-                'labels' => $parkings->pluck('date')->toArray(),
-                'data' => $parkings->pluck('count')->toArray(),
+                'labels' => $labels,
+                'labels_formatted' => $labelsFormatted,
+                'data' => $data,
+                'points' => collect($labels)->values()->map(function ($date, $index) use ($labelsFormatted, $data) {
+                    return [
+                        'date' => $date,
+                        'label' => $labelsFormatted[$index] ?? $date,
+                        'value' => (int) ($data[$index] ?? 0),
+                    ];
+                })->toArray(),
+                'datasets' => [
+                    [
+                        'label' => 'Total Parkir',
+                        'data' => $data,
+                    ],
+                ],
             ];
 
             return $this->sendResponse([
                 'total_vehicles' => $totalVehicles,
                 'total_users' => $totalUsers,
                 'total_parkings' => $totalParkings,
+                'total_parkings_today' => $totalParkingsToday,
                 'chart_data' => $chartData,
             ], 'Dashboard data retrieved successfully');
         } catch (\Exception $e) {

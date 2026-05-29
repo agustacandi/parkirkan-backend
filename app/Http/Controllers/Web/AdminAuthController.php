@@ -30,7 +30,7 @@ class AdminAuthController extends Controller
             // Cek apakah pengguna yang login adalah admin
             if (Auth::user()->isAdmin()) {
                 $request->session()->regenerate();
-                return redirect()->intended(route('admin.dashboard'));
+                return redirect()->intended(route('admin.dashboard', absolute: false));
             }
 
             // Jika bukan admin, logout paksa
@@ -58,6 +58,6 @@ class AdminAuthController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect()->route('admin.login');
+        return redirect('/admin/login');
     }
 }

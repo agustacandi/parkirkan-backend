@@ -24,10 +24,18 @@ return Application::configure(basePath: dirname(__DIR__))
         // Mengarahkan user yang belum login ke halaman login admin khusus untuk prefix /admin
         $middleware->redirectGuestsTo(function (Request $request) {
             if ($request->is('admin*')) {
-                return route('admin.login');
+                return '/admin/login';
             }
             // Jika nanti ada halaman login publik, arahkan ke route('login')
-            return route('admin.login');
+            return '/admin/login';
+        });
+
+        $middleware->redirectUsersTo(function (Request $request) {
+            if ($request->is('admin*')) {
+                return '/admin/dashboard';
+            }
+
+            return '/';
         });
     })
     ->withExceptions(function (Exceptions $exceptions) {
