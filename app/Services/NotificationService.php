@@ -11,25 +11,35 @@ use Kreait\Firebase\Messaging\Notification;
 class NotificationService
 {
     protected $messaging;
-    protected readonly Notification $notification;
+    protected readonly ?Notification $notification;
     protected readonly MessageData|array $data;
+    protected readonly bool $includeNotification;
 
-    public function __construct(Notification $notification, MessageData|array $data)
+    public function __construct(?Notification $notification, MessageData|array $data, bool $includeNotification = true)
     {
         $this->messaging = app('firebase.messaging');
         $this->notification = $notification;
         $this->data = $data;
+        $this->includeNotification = $includeNotification;
     }
 
     public function sendToTopic(string $topic, ?AndroidConfig $androidConfig = null, ?ApnsConfig $apnsConfig = null): void
     {
         $message = CloudMessage::new()
             ->toTopic($topic)
-            ->withNotification($this->notification)
             ->withData($this->data);
 
-        if ($androidConfig) $message->withAndroidConfig($androidConfig);
-        if ($apnsConfig) $message->withApnsConfig($apnsConfig);
+        if ($this->includeNotification && $this->notification) {
+            $message = $message->withNotification($this->notification);
+        }
+
+        if ($androidConfig) {
+            $message = $message->withAndroidConfig($androidConfig);
+        }
+
+        if ($apnsConfig) {
+            $message = $message->withApnsConfig($apnsConfig);
+        }
 
         $this->messaging->send($message);
     }
@@ -38,11 +48,19 @@ class NotificationService
     {
         $message = CloudMessage::new()
             ->toToken($token)
-            ->withNotification($this->notification)
             ->withData($this->data);
 
-        if ($androidConfig) $message->withAndroidConfig($androidConfig);
-        if ($apnsConfig) $message->withApnsConfig($apnsConfig);
+        if ($this->includeNotification && $this->notification) {
+            $message = $message->withNotification($this->notification);
+        }
+
+        if ($androidConfig) {
+            $message = $message->withAndroidConfig($androidConfig);
+        }
+
+        if ($apnsConfig) {
+            $message = $message->withApnsConfig($apnsConfig);
+        }
 
         $this->messaging->send($message);
     }

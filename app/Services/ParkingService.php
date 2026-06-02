@@ -125,16 +125,15 @@ class ParkingService
 
             $notificationData = [
                 'notification_type' => 'alert',
+                'notification_title' => '🚨 ATTENTION!',
+                'notification_body' => 'Someone is trying to check out your vehicle!',
                 'click_action' => 'OPEN_NOTIFICATION',
                 'vehicle_license_plate' => (string) $vehicle->license_plate,
             ];
 
-            $notificationService = new NotificationService($notification, $notificationData);
+            $notificationService = new NotificationService($notification, $notificationData, false);
             $notificationService->sendToToken($user->fcm_token, AndroidConfig::fromArray([
                 'priority' => 'high',
-                'notification' => [
-                    'channel_id' => 'parking_alert_channel',
-                ],
             ]));
 
             return [
@@ -158,23 +157,21 @@ class ParkingService
      */
     public function reportCheckOut(Vehicle $vehicle): void
     {
-        $notification = Notification::create(
-            '🚨 SECURITY ALERT!',
-            'A user’s vehicle with license plate ' . (string) $vehicle->license_plate . ' is being driven away without authorization!'
-        );
+        $title = '🚨 SECURITY ALERT!';
+        $body = 'A user’s vehicle with license plate ' . (string) $vehicle->license_plate . ' is being driven away without authorization!';
+        $notification = Notification::create($title, $body);
 
         $notificationData = [
             'notification_type' => 'alert',
+            'notification_title' => $title,
+            'notification_body' => $body,
             'click_action' => 'OPEN_NOTIFICATION',
             'vehicle_license_plate' => (string) $vehicle->license_plate,
         ];
 
-        $notificationService = new NotificationService($notification, $notificationData);
+        $notificationService = new NotificationService($notification, $notificationData, false);
         $notificationService->sendToTopic('alert', AndroidConfig::fromArray([
             'priority' => 'high',
-            'notification' => [
-                'channel_id' => 'parking_alert_channel',
-            ],
         ]));
     }
 
