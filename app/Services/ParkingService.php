@@ -93,7 +93,7 @@ class ParkingService
     public function storeImage($image, string $directory): string
     {
         $filename = $image->hashName();
-        $image->storeAs($directory, $filename);
+        $image->storeAs($directory, $filename, 'public');
         return $filename;
     }
 

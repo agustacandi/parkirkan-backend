@@ -25,7 +25,7 @@
             <div class="space-y-5">
                 <div>
                     <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Status</p>
-                    @if($parking->status == 'completed' || $parking->check_out_time)
+                    @if($parking->check_out_time || in_array($parking->status, ['done', 'completed']))
                         <x-admin.badge type="success">Selesai</x-admin.badge>
                     @else
                         <x-admin.badge type="warning">Sedang Parkir</x-admin.badge>
@@ -65,17 +65,45 @@
         <div class="p-6 md:p-8 bg-white/30 flex flex-col justify-center items-center">
             <h3 class="text-lg font-extrabold tracking-tight text-slate-900 mb-6 w-full text-left">Foto Kendaraan</h3>
 
-            @if($parking->vehicle_image_url)
-                <div class="w-full max-w-sm aspect-video bg-slate-200/60 rounded-2xl overflow-hidden shadow-inner relative border border-white/60 ring-1 ring-slate-900/10">
-                    <img src="{{ Storage::url($parking->vehicle_image_url) }}" alt="Foto Plat Nomor" class="w-full h-full object-cover">
+            <div class="w-full grid grid-cols-1 gap-6">
+                <div>
+                    <div class="flex items-center justify-between mb-3">
+                        <p class="text-sm font-extrabold text-slate-900">Foto Check-in</p>
+                        <p class="text-xs text-slate-500">{{ \Carbon\Carbon::parse($parking->check_in_time)->format('d M Y, H:i') }}</p>
+                    </div>
+
+                    @if($parking->check_in_image)
+                        <div class="w-full aspect-video bg-slate-200/60 rounded-2xl overflow-hidden shadow-inner relative border border-white/60 ring-1 ring-slate-900/10">
+                            <img src="{{ $parking->check_in_image }}" alt="Foto kendaraan saat check-in" class="w-full h-full object-cover">
+                        </div>
+                    @else
+                        <div class="w-full aspect-video bg-white/40 border-2 border-dashed border-slate-200/80 rounded-2xl flex flex-col items-center justify-center text-slate-400">
+                            <svg class="w-10 h-10 mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                            <span class="text-sm font-medium">Tidak ada foto check-in</span>
+                        </div>
+                    @endif
                 </div>
-                <p class="text-xs text-slate-500 mt-3 text-center">Ditangkap saat check-in</p>
-            @else
-                <div class="w-full max-w-sm aspect-video bg-white/40 border-2 border-dashed border-slate-200/80 rounded-2xl flex flex-col items-center justify-center text-slate-400">
-                    <svg class="w-10 h-10 mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                    <span class="text-sm font-medium">Tidak ada foto tersedia</span>
+
+                <div>
+                    <div class="flex items-center justify-between mb-3">
+                        <p class="text-sm font-extrabold text-slate-900">Foto Check-out</p>
+                        <p class="text-xs text-slate-500">
+                            {{ $parking->check_out_time ? \Carbon\Carbon::parse($parking->check_out_time)->format('d M Y, H:i') : 'Belum check-out' }}
+                        </p>
+                    </div>
+
+                    @if($parking->check_out_image)
+                        <div class="w-full aspect-video bg-slate-200/60 rounded-2xl overflow-hidden shadow-inner relative border border-white/60 ring-1 ring-slate-900/10">
+                            <img src="{{ $parking->check_out_image }}" alt="Foto kendaraan saat check-out" class="w-full h-full object-cover">
+                        </div>
+                    @else
+                        <div class="w-full aspect-video bg-white/40 border-2 border-dashed border-slate-200/80 rounded-2xl flex flex-col items-center justify-center text-slate-400">
+                            <svg class="w-10 h-10 mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                            <span class="text-sm font-medium">Tidak ada foto check-out</span>
+                        </div>
+                    @endif
                 </div>
-            @endif
+            </div>
         </div>
     </div>
 </div>
